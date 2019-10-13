@@ -506,5 +506,139 @@ admin.site.register(Choice)
 
 Choice 모델도 추가할 수 있음.
 
+# 뷰(view)
+
+
+
+* 뷰 추가하기
+
+**`views.py`**에 요청에 대한 응답 핸들러를 만든 후 **`urls.py`**에 핸들러 등록
+
+```python
+# polls/views.py
+
+def detail(request, question_id):
+    return HttpResponse("You're looking at question %s." % question_id)
+
+def results(request, question_id):
+    response = "You're looking at the results of question %s."
+    return HttpResponse(response % question_id)
+
+def vote(request, question_id):
+    return HttpResponse("You're voting on question %s." % question_id)
+```
+
+```python
+# polls/urls.py
+
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    # ex: /polls/
+    path('', views.index, name='index'),
+    # ex: /polls/5/
+    path('<int:question_id>/', views.detail, name='detail'),
+    # ex: /polls/5/results/
+    path('<int:question_id>/results/', views.results, name='results'),
+    # ex: /polls/5/vote/
+    path('<int:question_id>/vote/', views.vote, name='vote'),
+]
+```
+
+
+
+* 뷰(view)에 기능넣기
+
+```python
+from django.http import HttpResponse
+
+from .models import Question
+
+
+def index(request):
+    latest_question_list = Question.objects.order_by('-pub_date')[:5]
+    output = ', '.join([q.question_text for q in latest_question_list])
+    return HttpResponse(output)
+
+# Leave the rest of the views (detail, results, vote) unchanged
+```
+
+/polls로 접속하면 최신 데이터 5개를 ,로 구분하여 응답
+
+/admin에서 Question 데이터를 추가하고 /polls로 요청해보자 최신 데이터 순으로 5개 까지 출력할 것이다.
+
+
+
+* templates 제공
+
+polls앱에 templates 디텍터리 생성 후 polls 디렉터리 생성.  이 안에 index.html을 만들어준다. 최종적으로 경로는 **`polls/templates/polls/index.html`** 이 된다. templates 디렉터리를 찾을 수 있는 이유는 mysite/settings.py안에 APP_DIRS 옵션이 True로 설정되있기 때문이다.
+
+>  참고: 여기서 polls/templates/polls이 아닌 polls/templates로 되지 않을까 할 수 있는데, 이는 좋지 못한 방법이다. html 파일을 가져올 때 template가 루트 경로가 되어 html 파일 경로를 전달한다. 이때 template 아래에 바로 html을 작성하면 다른 앱에서 동일한 파일이름을 가진 html은 재 정의가 된다. 
+>
+> 다음 코드의 view.py를 보면 좀 더 명확하게 알 수 있다. 
+
+```html
+<!-- polls/templates/polls/index.html -->
+
+{% if latest_question_list %}
+    <ul>
+    {% for question in latest_question_list %}
+        <li><a href="/polls/{{ question.id }}/">{{ question.question_text }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No polls are available.</p>
+{% endif %}
+```
+
+```python
+# polls/models.py
+
+from django.http import HttpResponse
+from django.template import loader
+
+from .models import Question
+
+
+def index(request):
+    latest_question_list = Question.objects.order_by('-pub_date')[:5]
+    template = loader.get_template('polls/index.html')
+    context = {
+        'latest_question_list': latest_question_list,
+    }
+    return HttpResponse(template.render(context, request))
+```
+
+
+
+* render()
+
+템플릿에  context를 채워넣어 표현한 결과를 **`HttpResponse`** 객체와 함께 응답하는 구조는 자주쓰는 용법. 이는 render()를 이용하여 간결하게 표현가능
+
+```python
+# polls/views.py
+
+def index(req):
+  latest_questions = Question.objects.order_by('-pub_date')[:5]
+
+  context = {
+    "latest_question_list": latest_questions
+  }
+
+  return render(req, 'polls/index.html', context)
+```
+
+render() 함수는 요청 객체를 첫 번째 인자로 받고, 템플릿 이름, context 데이터 순으로 인자를 받습니다. 이렇게 전달된 인자를 통해 **`HttpResponse`** 객체를 반환합니다.
+
+
+
+* 404 에러 일으키기
+
+```
+
+```
+
 
 
